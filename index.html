@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fruttein GKM — Tracking Penjualan</title>
+  <meta name="description" content="Sistem tracking penjualan Fruttein di GKM FEB UB">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ===== LOGIN OVERLAY ===== -->
+<div id="loginOverlay" class="login-overlay">
+  <div class="login-box">
+    <div class="login-brand">
+      <span class="login-logo">🧃</span>
+      <h1 class="login-title">FRUTTEIN GKM</h1>
+      <p class="login-sub">Sistem Tracking Penjualan</p>
+    </div>
+
+    <!-- Role select -->
+    <div id="roleSelect">
+      <p class="login-choose">Pilih akun untuk masuk</p>
+      <button class="role-card" id="roleGkm" onclick="selectRole('gkm')">
+        <span class="role-icon">🛒</span>
+        <div class="role-info">
+          <strong>GKM</strong>
+          <span>Catat penjualan harian</span>
+        </div>
+        <span class="role-arrow">›</span>
+      </button>
+      <button class="role-card" id="roleAdmin" onclick="selectRole('admin')">
+        <span class="role-icon">🍹</span>
+        <div class="role-info">
+          <strong>Fruttein Admin</strong>
+          <span>Kelola stok, menu & laporan</span>
+        </div>
+        <span class="role-arrow">›</span>
+      </button>
+    </div>
+
+    <!-- Password form -->
+    <div id="loginForm" style="display:none">
+      <div class="login-form-role" id="loginFormRole"></div>
+      <input type="password" id="loginPassword" class="login-input"
+        placeholder="Masukkan password..."
+        onkeydown="if(event.key==='Enter') doLogin()">
+      <button class="btn-primary btn-full" style="margin-top:12px" onclick="doLogin()">🔓 Masuk</button>
+      <button class="btn-ghost btn-full" style="margin-top:8px" onclick="backToSelect()">← Kembali</button>
+      <p class="login-error" id="loginError"></p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP CONTAINER ===== -->
+<div id="appContainer" style="display:none">
+
+  <header class="header">
+    <div class="header-brand">
+      <span class="logo-emoji">🧃</span>
+      <div>
+        <h1 class="brand-name">FRUTTEIN</h1>
+        <p class="brand-sub">GKM Tracker</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="live-dot"></span>
+      <span id="headerDateLabel" class="header-date-label">—</span>
+      <span id="userBadge" class="user-badge"></span>
+      <button class="logout-btn" onclick="logout()" title="Logout">⏻</button>
+    </div>
+  </header>
+
+  <nav class="nav" id="mainNav">
+    <button class="nav-btn" data-tab="dashboard" id="navDashboard">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Dashboard</span>
+    </button>
+    <button class="nav-btn" data-tab="stok" id="navStok">
+      <span class="nav-icon">📦</span>
+      <span class="nav-label">Stok</span>
+    </button>
+    <button class="nav-btn" data-tab="jual" id="navJual">
+      <span class="nav-icon">🛒</span>
+      <span class="nav-label">Jual</span>
+    </button>
+    <button class="nav-btn" data-tab="riwayat" id="navRiwayat">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">Riwayat</span>
+    </button>
+    <button class="nav-btn" data-tab="analitik" id="navAnalitik">
+      <span class="nav-icon">📈</span>
+      <span class="nav-label">Analitik</span>
+    </button>
+    <button class="nav-btn" data-tab="produk" id="navProduk">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Produk</span>
+    </button>
+  </nav>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section class="tab" id="tab-dashboard">
+      <div class="date-bar">
+        <label class="date-label">Tanggal</label>
+        <input type="date" id="dashDate" class="date-input" onchange="changeDate(this.value)">
+        <button class="btn-ghost-sm" onclick="goToToday()">Hari Ini</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">🛍️</div>
+          <div class="stat-value" id="statTotalSold">—</div>
+          <div class="stat-label">Total Terjual</div>
+        </div>
+        <div class="stat-card highlight">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value" id="statRevenue">—</div>
+          <div class="stat-label">Omset</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value" id="statStockIn">—</div>
+          <div class="stat-label">Stok Dibawa</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔮</div>
+          <div class="stat-value" id="statRemaining">—</div>
+          <div class="stat-label">Sisa Stok</div>
+        </div>
+      </div>
+      <div class="section-header">
+        <h2 class="section-title">Detail Produk</h2>
+        <span class="section-date" id="dashDateLabel"></span>
+      </div>
+      <div id="productBreakdown"></div>
+      <div class="card notes-card" id="notesCard">
+        <h3 class="card-title">📝 Catatan</h3>
+        <textarea id="notesInput" class="notes-textarea" placeholder="Catatan hari ini..."></textarea>
+        <button class="btn-primary" onclick="saveNotes()">Simpan Catatan</button>
+      </div>
+    </section>
+
+    <!-- STOK (admin only) -->
+    <section class="tab" id="tab-stok">
+      <div class="tab-header">
+        <h2>📦 Input Stok Harian</h2>
+        <p>Masukkan jumlah stok yang dibawa ke GKM</p>
+      </div>
+      <div class="date-bar">
+        <label class="date-label">Tanggal</label>
+        <input type="date" id="stokDate" class="date-input" onchange="changeDate(this.value)">
+      </div>
+      <div id="stockInputContainer"></div>
+      <button class="btn-primary btn-full" onclick="saveStock()" id="saveStockBtn">💾 Simpan Stok</button>
+      <div class="info-box">ℹ️ Data tersimpan di cloud dan bisa diubah kapan saja.</div>
+    </section>
+
+    <!-- JUAL -->
+    <section class="tab" id="tab-jual">
+      <div class="tab-header">
+        <h2>🛒 Catat Penjualan</h2>
+        <p>Ketuk + / − untuk update jumlah terjual</p>
+      </div>
+      <div class="date-bar">
+        <label class="date-label">Tanggal</label>
+        <input type="date" id="jualDate" class="date-input" onchange="changeDate(this.value)">
+      </div>
+      <div id="salesInputContainer"></div>
+      <div class="omset-banner">
+        <div class="omset-label">💰 Omset Sekarang</div>
+        <div class="omset-value" id="currentOmset">Rp 0</div>
+      </div>
+    </section>
+
+    <!-- RIWAYAT (admin only) -->
+    <section class="tab" id="tab-riwayat">
+      <div class="tab-header">
+        <h2>📅 Riwayat Penjualan</h2>
+        <p>Ringkasan per hari</p>
+      </div>
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label>Dari</label>
+          <input type="date" id="filterFrom" class="date-input">
+        </div>
+        <div class="filter-group">
+          <label>Sampai</label>
+          <input type="date" id="filterTo" class="date-input">
+        </div>
+        <button class="btn-primary" onclick="loadHistory()">🔍 Tampilkan</button>
+        <button class="btn-ghost" onclick="exportCSV()">📥 CSV</button>
+      </div>
+      <div id="historyContainer"></div>
+    </section>
+
+    <!-- ANALITIK (admin only) -->
+    <section class="tab" id="tab-analitik">
+      <div class="tab-header">
+        <h2>📈 Analitik</h2>
+        <p>Performa 7 hari terakhir</p>
+      </div>
+      <div class="card chart-card">
+        <h3 class="card-title">Penjualan Harian</h3>
+        <canvas id="salesChart"></canvas>
+      </div>
+      <div class="card chart-card">
+        <h3 class="card-title">Perbandingan Produk</h3>
+        <canvas id="productChart"></canvas>
+      </div>
+      <div class="card">
+        <h3 class="card-title">🏆 Terlaris Minggu Ini</h3>
+        <div id="topProducts"></div>
+      </div>
+    </section>
+
+    <!-- PRODUK MANAGEMENT (admin only) -->
+    <section class="tab" id="tab-produk">
+      <div class="tab-header">
+        <h2>⚙️ Kelola Produk</h2>
+        <p>Tambah menu, ubah harga, aktif/nonaktif</p>
+      </div>
+
+      <!-- Add / Edit Form -->
+      <div class="card" id="produkFormCard">
+        <h3 class="card-title" id="produkFormTitle">✨ Tambah Produk Baru</h3>
+        <input type="hidden" id="editProdukId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Nama Produk</label>
+            <input type="text" id="prodName" class="form-input" placeholder="Nanamango">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emoji</label>
+            <input type="text" id="prodEmoji" class="form-input" placeholder="🥭" maxlength="4">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Harga (Rp)</label>
+            <input type="number" id="prodPrice" class="form-input" placeholder="17000" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Warna (hex)</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="color" id="prodColorPicker" value="#E8215A" style="width:44px;height:44px;border:none;background:none;cursor:pointer;padding:0">
+              <input type="text" id="prodColor" class="form-input" placeholder="#E8215A" style="flex:1">
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <button class="btn-primary" onclick="saveProduk()" id="saveProdukBtn">✨ Tambah Produk</button>
+          <button class="btn-ghost" onclick="resetProdukForm()" id="cancelProdukBtn" style="display:none">✕ Batal</button>
+        </div>
+      </div>
+
+      <!-- Product List -->
+      <div class="section-header">
+        <h2 class="section-title">Daftar Produk</h2>
+      </div>
+      <div id="produkList"></div>
+
+      <!-- Change Passwords -->
+      <div class="card" style="margin-top:8px">
+        <h3 class="card-title">🔐 Ubah Password</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Password GKM</label>
+            <input type="password" id="newPassGkm" class="form-input" placeholder="Password baru GKM...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password Admin</label>
+            <input type="password" id="newPassAdmin" class="form-input" placeholder="Password baru Admin...">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="savePasswords()">💾 Simpan Password</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="js/app.js"></script>
+<script src="js/app2.js"></script>
+</body>
+</html>
