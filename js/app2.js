@@ -38,6 +38,13 @@ function renderDashboard() {
   // hide notes card for GKM
   const nc = document.getElementById('notesCard');
   if (nc) nc.style.display = currentUser?.role === 'gkm' ? 'none' : 'block';
+
+  // Show/hide reset button (admin only)
+  const rb = document.getElementById('resetHarianBtn');
+  if (rb) {
+    const hasSales = PRODUCTS.some(p => getSold(p.id) > 0);
+    rb.style.display = (currentUser?.role === 'admin' && hasSales) ? 'block' : 'none';
+  }
 }
 
 async function saveNotes() {
@@ -46,6 +53,23 @@ async function saveNotes() {
     await db.collection(GKM_COL).doc(currentDate).set({ notes:v, updatedAt:firebase.firestore.FieldValue.serverTimestamp() },{ merge:true });
     showToast('✅ Catatan disimpan!');
   } catch(e){ showToast('Gagal simpan catatan.','error'); }
+}
+
+async function resetHarian(dateStr) {
+  const label = dateStr === getTodayString() ? 'hari ini' : dateStr;
+  if (!confirm(`Reset semua data JUAL untuk ${label}?\nStok tidak berubah, hanya penjualan yang direset ke 0.`)) return;
+  try {
+    const zeroed = {};
+    PRODUCTS.forEach(p => zeroed[p.id] = 0);
+    await db.collection(GKM_COL).doc(dateStr).set(
+      { sold: zeroed, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+    showToast('✅ Data jual direset!');
+    // Reload history if on riwayat tab
+    const histEl = document.getElementById('historyContainer');
+    if (histEl && histEl.children.length) loadHistory();
+  } catch(e) { showToast('Gagal reset: ' + e.message, 'error'); }
 }
 
 // ===== STOCK INPUT =====
@@ -214,10 +238,15 @@ async function loadHistory() {
       let totS=0,totR=0;
       PRODUCTS.forEach(p=>{totS+=Number(sold[p.id]||0);totR+=Number(sold[p.id]||0)*p.price;});
       const chips=PRODUCTS.filter(p=>Number(sold[p.id]||0)>0).map(p=>`<span class="history-chip">${p.emoji} ${sold[p.id]}</span>`).join('');
+      const hasSales = PRODUCTS.some(p => Number(sold[p.id]||0) > 0);
+      const resetBtn = currentUser?.role === 'admin' && hasSales
+        ? `<button class="btn-sm danger" style="margin-top:10px" onclick="resetHarian('${data.date}')">🔄 Reset Jual</button>`
+        : '';
       return `<div class="history-card">
         <div class="history-card-header"><div class="history-date">📅 ${fmtShort(data.date)}</div><div class="history-revenue">${formatRp(totR)}</div></div>
         <div class="history-products">${chips||'<span style="color:var(--text-muted);font-size:12px">Tidak ada penjualan</span>'}</div>
         ${data.notes?`<p style="margin-top:8px;font-size:12px;color:var(--text-muted)">💬 ${data.notes}</p>`:''}
+        ${resetBtn}
       </div>`;
     }).join('');
   } catch(e){ el.innerHTML=`<div class="empty-state"><div class="empty-icon">❌</div><p>Gagal muat: ${e.message}</p></div>`; }

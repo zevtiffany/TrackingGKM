@@ -144,6 +144,16 @@
         <textarea id="notesInput" class="notes-textarea" placeholder="Catatan hari ini..."></textarea>
         <button class="btn-primary" onclick="saveNotes()">Simpan Catatan</button>
       </div>
+
+      <!-- Reset Jual (admin only, shown only if ada penjualan) -->
+      <div id="resetHarianBtn" style="display:none; margin-bottom:20px">
+        <button class="btn-reset-jual" onclick="resetHarian(currentDate)">
+          🔄 Reset Data Jual Hari Ini
+        </button>
+        <p style="font-size:11px; color:var(--text-muted); margin-top:6px; text-align:center">
+          Stok tidak berubah. Hanya penjualan yang dikembalikan ke 0.
+        </p>
+      </div>
     </section>
 
     <!-- STOK (admin only) -->

@@ -1172,4 +1172,27 @@ body {
 
 .carryover-banner strong { color: #fff; font-weight: 800; }
 
+/* === RESET JUAL BUTTON === */
+.btn-reset-jual {
+  width: 100%;
+  padding: 14px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px dashed rgba(255, 107, 107, 0.5);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 800;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: var(--transition);
+  letter-spacing: 0.3px;
+}
+
+.btn-reset-jual:hover {
+  background: rgba(255, 107, 107, 0.2);
+  border-color: var(--danger);
+  transform: translateY(-1px);
+}
+
+
 
