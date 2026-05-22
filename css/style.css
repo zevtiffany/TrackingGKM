@@ -1154,3 +1154,22 @@ body {
   .form-grid { grid-template-columns: 1fr; }
 }
 
+/* === CARRYOVER BANNER === */
+.carryover-banner {
+  background: rgba(255, 209, 102, 0.1);
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--warning);
+  margin-bottom: 16px;
+  font-weight: 500;
+  line-height: 1.6;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.carryover-banner strong { color: #fff; font-weight: 800; }
+
+

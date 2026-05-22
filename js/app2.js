@@ -49,18 +49,29 @@ async function saveNotes() {
 }
 
 // ===== STOCK INPUT =====
-function renderStockInputs() {
+function renderStockInputs(carryover = null) {
   const el = document.getElementById('stockInputContainer'); if (!el) return;
-  el.innerHTML = PRODUCTS.filter(p=>p.isActive).map(p => `
-    <div class="stock-input-card">
+
+  // Banner notif carryover
+  let banner = '';
+  if (carryover) {
+    banner = `<div class="carryover-banner">
+      📦 Stok otomatis dari sisa <strong>${fmtShort(carryover.fromDate)}</strong>. Sesuaikan jika ada tambahan, lalu klik Simpan.
+    </div>`;
+  }
+
+  el.innerHTML = banner + PRODUCTS.filter(p=>p.isActive).map(p => {
+    const val = carryover ? (carryover.values[p.id] ?? 0) : getStock(p.id);
+    return `<div class="stock-input-card">
       <div class="stock-emoji">${p.emoji}</div>
       <div class="stock-info"><h3>${p.name}</h3><p>${formatRp(p.price)} / cup</p></div>
       <div class="stock-number-input">
         <button class="qty-btn" onclick="adjQty('sk-${p.id}',-1)">−</button>
-        <input type="number" class="qty-value" id="sk-${p.id}" value="${getStock(p.id)}" min="0">
+        <input type="number" class="qty-value" id="sk-${p.id}" value="${val}" min="0">
         <button class="qty-btn" onclick="adjQty('sk-${p.id}',1)">+</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function adjQty(inputId, delta) {
@@ -84,6 +95,31 @@ async function saveStock() {
     showToast('✅ Stok berhasil disimpan!');
   } catch(e){ showToast('Gagal simpan stok.','error'); }
   finally { if(btn){ btn.textContent='💾 Simpan Stok'; btn.disabled=false; } }
+}
+
+// ===== CARRYOVER STOCK =====
+async function fetchCarryoverStock(dateStr) {
+  try {
+    const snap = await db.collection(GKM_COL)
+      .where('date', '<', dateStr)
+      .orderBy('date', 'desc')
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    const prev = snap.docs[0].data();
+    const values = {};
+    let hasAny = false;
+    PRODUCTS.forEach(p => {
+      const s  = Number(prev.stock?.[p.id] || 0);
+      const so = Number(prev.sold?.[p.id]  || 0);
+      values[p.id] = Math.max(0, s - so);
+      if (values[p.id] > 0) hasAny = true;
+    });
+    return hasAny ? { values, fromDate: prev.date } : null;
+  } catch(e) {
+    console.error('Carryover error:', e);
+    return null;
+  }
 }
 
 // ===== SALES INPUT — BUG FIX: use full sold object =====

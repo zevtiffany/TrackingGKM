@@ -228,10 +228,19 @@ function updateDateLabels() {
 // ===== FIRESTORE LISTENER =====
 function subscribeToDate(dateStr) {
   if (unsubListener) unsubListener();
-  unsubListener = db.collection(GKM_COL).doc(dateStr).onSnapshot(doc => {
-    dailyData = doc.exists ? doc.data() : { stock:{}, sold:{}, notes:'' };
-    renderDashboard();
-    renderStockInputs();
-    renderSalesInputs();
+  unsubListener = db.collection(GKM_COL).doc(dateStr).onSnapshot(async doc => {
+    if (doc.exists) {
+      dailyData = doc.data();
+      renderDashboard();
+      renderStockInputs(null);
+      renderSalesInputs();
+    } else {
+      dailyData = { stock:{}, sold:{}, notes:'' };
+      // Fetch sisa stok dari hari sebelumnya
+      const carryover = await fetchCarryoverStock(dateStr);
+      renderDashboard();
+      renderStockInputs(carryover);
+      renderSalesInputs();
+    }
   }, err => { console.error(err); showToast('Gagal memuat data.','error'); });
 }
